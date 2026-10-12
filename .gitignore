@@ -48,6 +48,9 @@ backend/app/agent/bge/model.onnx
 assets/videos/
 video_frame_*.png
 
+# ─── 本地开发辅助（不入库）───
+CLAUDE.md
+
 # ─── IDE & OS ───
 .idea/
 .vscode/
