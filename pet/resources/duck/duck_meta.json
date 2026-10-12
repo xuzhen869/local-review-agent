@@ -1,0 +1,36 @@
+{
+ "actions": {
+  "idle": {
+   "frames": 3,
+   "frame_ms": 160,
+   "weight": 40
+  },
+  "spin": {
+   "frames": 8,
+   "frame_ms": 80,
+   "weight": 15
+  },
+  "jump": {
+   "frames": 4,
+   "frame_ms": 90,
+   "weight": 15
+  },
+  "tilt": {
+   "frames": 5,
+   "frame_ms": 110,
+   "weight": 15
+  },
+  "bow": {
+   "frames": 5,
+   "frame_ms": 110,
+   "weight": 15
+  }
+ },
+ "order": [
+  "idle",
+  "spin",
+  "jump",
+  "tilt",
+  "bow"
+ ]
+}

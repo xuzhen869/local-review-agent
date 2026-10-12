@@ -1,0 +1,266 @@
+"""全局设计 token：Orbis 太空风（深空蓝 + 霓虹绿 + liquid-glass 玻璃）。
+
+视觉语言：固定暗色太空主题（#010828 深空海军蓝底 / #EFF4FF 奶油白字 / #6FFF00 霓虹绿点缀），
+Anton 压缩标题字体 + Condiment 手写体点缀 + 等宽正文标签 + 玻璃卡片渐变边缘。
+
+设计来源：Orbis.Nft 网页模板（Anton/Condiment/liquid-glass/neon）转换为桌面 tkinter 实现。
+Anton/Condiment 通过 AddFontResourceExW 私有注册（不写入系统），缺失自动回退系统字体。
+
+注意：本文件为单一「space」主题；set_theme / detect_system_theme 保留接口以兼容旧调用，
+内部恒为 space。UI 组件在创建时读取当前 token。
+"""
+from __future__ import annotations
+
+import os
+import sys
+import tkinter.font as _tkfont
+
+# ---------------------------------------------------------------------------
+# 字体（Anton=压缩标题 / Condiment=手写点缀 / 等宽=正文标签 / YaHei=中文正文）
+# Anton 无 CJK 字形：中文标题走 F_SANS(YaHei Bold)，拉丁与数字走 F_GROTESK
+# ---------------------------------------------------------------------------
+def _fams() -> set[str]:
+    try:
+        return set(_tkfont.families())
+    except Exception:  # noqa: BLE001  无 Tk root 时无法枚举
+        return set()
+
+
+def _pick(family: str, *fallbacks: str) -> str:
+    fams = _fams()
+    for f in (family, *fallbacks):
+        if f in fams:
+            return f
+    return family
+
+
+# 拉丁/数字显示字体（Anton 私有注册后启用；回退链压缩黑体）
+F_GROTESK = _pick("Anton", "Arial Black", "Segoe UI Variable Display", "Segoe UI")
+# 手写体点缀（Condiment；回退 Windows 自带西文手写体）
+F_CONDIMENT = _pick("Condiment", "Segoe Script", "Segoe Print", "Segoe UI")
+# 中文正文（Anton 无 CJK，中文标题/正文用现代黑体）
+F_SANS = _pick("Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI")
+# 显示大数字（统计数字 → Anton）
+F_DISPLAY = F_GROTESK
+
+F_TITLE = (F_SANS, 18, "bold")       # 页面大标题（中文）
+F_H = (F_SANS, 13, "bold")           # 卡片 / 区块标题
+F_BODY = (F_SANS, 10)                # 正文 / 按钮
+F_SMALL = (F_SANS, 9)                # 次要文字 / 副标题
+F_TINY = (F_SANS, 8)                 # 图例 / 角标
+F_MONO = ("Cascadia Mono", "Consolas", "monospace")  # 代码 / 时间戳 / 标签
+F_STAT = (F_GROTESK, 22, "normal")   # 统计大数字（Anton 压缩感）
+F_STAT_SMALL = (F_GROTESK, 14, "normal")  # 统计大数字（超宽降级）
+F_HERO = (F_GROTESK, 32, "normal")   # Hero 大标题（拉丁/数字）
+F_CUR = (F_CONDIMENT, 24, "normal")  # 手写体点缀基准字号
+F_EMOJI = ("Segoe UI Emoji", 12)     # 图标 emoji
+F_NAV = (F_SANS, 10, "bold")         # 侧边栏导航文字
+F_ICON = _pick("Segoe Fluent Icons", "Segoe UI Symbol", "Segoe MDL2 Assets")  # 线框图标字体
+
+# ---------------------------------------------------------------------------
+# 字体私有注册（AddFontResourceExW，不写入系统）
+# ---------------------------------------------------------------------------
+_FONT_DIRS = None
+
+
+def _find_font_dir() -> str | None:
+    """定位 assets/fonts：优先 _MEIPASS（PyInstaller），再 exe 旁，最后源码项目根。"""
+    global _FONT_DIRS
+    if _FONT_DIRS is not None:
+        return _FONT_DIRS
+    cands: list[str] = []
+    if getattr(sys, "_MEIPASS", None):
+        cands.append(os.path.join(sys._MEIPASS, "assets", "fonts"))
+    if getattr(sys, "frozen", False) and sys.executable:
+        cands.append(os.path.join(os.path.dirname(sys.executable), "assets", "fonts"))
+    cands.append(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # pet/.. = 项目根
+        "assets", "fonts"))
+    for c in cands:
+        if os.path.isdir(c):
+            _FONT_DIRS = c
+            return c
+    return None
+
+
+def _register_font(path: str) -> None:
+    try:
+        import ctypes
+        FR_PRIVATE = 0x10
+        if os.path.exists(path):
+            ctypes.windll.gdi32.AddFontResourceExW(os.fspath(path), FR_PRIVATE, 0)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def ensure_fonts() -> None:
+    """注册 Anton/Condiment 私有字体并刷新相关字体 token。
+
+    必须在 Tk root 创建后调用（tkinter 需要 root 才能枚举字体）。
+    失败时静默回退系统字体，绝不抛异常。
+    """
+    global F_GROTESK, F_CONDIMENT, F_DISPLAY
+    global F_STAT, F_STAT_SMALL, F_HERO, F_CUR
+    d = _find_font_dir()
+    if d:
+        for f in ("Anton-Regular.ttf", "Condiment-Regular.ttf"):
+            _register_font(os.path.join(d, f))
+    F_GROTESK = _pick("Anton", "Arial Black", "Segoe UI Variable Display", "Segoe UI")
+    F_CONDIMENT = _pick("Condiment", "Segoe Script", "Segoe Print", "Segoe UI")
+    F_DISPLAY = F_GROTESK
+    F_STAT = (F_GROTESK, 22, "normal")
+    F_STAT_SMALL = (F_GROTESK, 14, "normal")
+    F_HERO = (F_GROTESK, 32, "normal")
+    F_CUR = (F_CONDIMENT, 24, "normal")
+
+
+# ---------------------------------------------------------------------------
+# 图标（Segoe Fluent Icons 码位，PUA 私有区）——沿用既有语义映射
+# ---------------------------------------------------------------------------
+ICON = {
+    "home": 0xE80F,      # 总览
+    "calendar": 0xE787,  # 周报
+    "comment": 0xE90A,   # 问答
+    "list": 0xEA37,      # 事件流
+    "clock": 0xE917,     # 番茄钟
+    "shield": 0xEA18,    # 审计日志
+    "settings": 0xE713,  # 数据源设置
+    "refresh": 0xE895,   # 刷新 / 同步
+    "add": 0xE710,       # 添加
+    "check": 0xE73E,     # 勾选 / 完成
+    "delete": 0xE74D,    # 删除
+    "close": 0xE711,     # 关闭
+    "play": 0xE768,      # 开始
+    "search": 0xE721,    # 搜索
+    "edit": 0xE70F,      # 编辑
+    "save": 0xE74E,      # 保存
+    "info": 0xE946,      # 信息
+    "warning": 0xE7BA,   # 警告
+    "document": 0xE8A5,  # 文档
+    "folder": 0xE8B7,    # 文件夹
+    "send": 0xE724,      # 发送
+    "eye": 0xE7B3,       # 显示 / 查看
+    "adapter": 0xEA18,   # 适配器（盾牌）
+    "queue": 0xE946,     # 队列（信息）
+    "disk": 0xE74E,      # 磁盘（保存/存储）
+    "streak": 0xE73E,    # 连续（勾选）
+    "total": 0xE710,     # 累计（添加）
+    "report": 0xE787,    # 周报（日历）
+    "qa": 0xE90A,        # 问答（评论）
+    "pomodoro": 0xE917,  # 番茄钟（时钟）
+    "audit": 0xEA18,     # 审计（盾牌）
+    "sources": 0xE713,   # 数据源（设置）
+    "todo": 0xE70F,      # 待办（编辑）
+    "review": 0xE8A5,    # 复习（文档）
+    "chat": 0xE90A,      # 聊天（评论）
+    "knowledge": 0xE8A5, # 知识点（文档）
+    "extract": 0xE710,   # 提取（添加）
+}
+
+# ---------------------------------------------------------------------------
+# 单一定暗色太空主题 token（Orbis）
+# ---------------------------------------------------------------------------
+_SPACE = {
+    "BG": "#010828",            # 页面底（深空海军蓝）
+    "SURFACE": "#00081F",       # 侧边栏（更深黑）
+    "CARD": "#0B1133",          # 玻璃卡底（≈ rgba(255,255,255,0.01) 叠加）
+    "CARD_HOVER": "#161E4A",    # 玻璃卡悬浮（white/10）
+    "CARD_ACTIVE": "#1D2757",   # 玻璃卡按下 / 选中
+    "BORDER": "#1C2450",        # 玻璃渐变边缘（暗侧）
+    "INK": "#EFF4FF",           # 主文字（cream）
+    "INK2": "#A9B4D0",          # 次要文字（cream 70%）
+    "MUTED": "#6A7396",         # 弱化文字
+    "ACCENT": "#6FFF00",        # 霓虹绿主色（强调/下划线/指示条）
+    "ACCENT_HOVER": "#8FFF33",  # 霓虹绿悬浮
+    "ACCENT_DEEP": "#57CC00",   # 霓虹绿按压
+    "ON_ACCENT": "#010828",     # 霓虹绿底上的文字（深空蓝）
+    "OK": "#30D158",
+    "WARN": "#FF9F0A",
+    "ERR": "#FF453A",
+    "INFO": "#7C3AED",
+    "PURPLE": "#7C3AED",        # NFT 圆按钮渐变起色（→#B724FF）
+    "PURPLE_END": "#B724FF",
+    "PURPLE_DEEP": "#5A25A8",   # 圆按钮下偏阴影深紫
+    "ON_PURPLE": "#FFFFFF",     # 紫底上的图标/箭头亮色
+    "SOURCE_COLORS": {
+        "git": "#4DA3FF", "fs": "#30D158", "ics": "#FF9F0A",
+        "imap": "#FF453A", "clipboard": "#BF5AF2", "manual": "#64D2FF",
+    },
+    "HEAT_LEVELS": ("#0A1030", "#123A1A", "#1F5C2A", "#3FAF35", "#6FFF00"),
+    "BUBBLE_PET": "#111A44",    # 聊天：对方（深玻璃）
+    "BUBBLE_USER": "#6FFF00",   # 聊天：自己（霓虹绿）
+    "GRADE_AGAIN": "#FF453A",
+    "GRADE_HARD": "#FF9F0A",
+    "GRADE_GOOD": "#7C3AED",
+    "GRADE_EASY": "#30D158",
+    "PHASE_FOCUS": "#6FFF00",   # 番茄：专注（霓虹绿）
+    "PHASE_SHORT": "#30D158",
+    "PHASE_LONG": "#7C3AED",
+    "ALT_ROW": "#0A1030",       # 表格斑马纹
+    "EMPH_TINT": "#0E2A14",     # 霓虹 15% 淡底
+    "GLASS_HI": "#3A4A8A",      # 玻璃顶部高光（≈ rgba 白 15%）
+    "GLASS_EDGE": "#1C2450",    # 玻璃渐变边缘描边
+    "FOCUS_RING": "#6FFF00",    # 键盘焦点描边（2px 霓虹绿）
+}
+
+_THEMES: dict[str, dict] = {"space": _SPACE}
+_current = "space"
+
+
+def current_theme() -> str:
+    """当前主题名（恒为 "space"）。"""
+    return _current
+
+
+def set_theme(name: str | None = None) -> None:
+    """兼容旧接口：恒设为 space 主题。旧调用传 light/dark 也归一到 space。"""
+    global _current
+    _current = "space"
+    globals().update(_SPACE)
+
+
+def detect_system_theme() -> str:
+    """兼容旧接口：恒返回 "space"（固定暗色太空主题）。"""
+    return "space"
+
+
+# ---------------------------------------------------------------------------
+# 间距 / 尺寸
+# ---------------------------------------------------------------------------
+PAD_PAGE = 24            # 页面边距（大留白）
+PAD_CARD = 16            # 卡片内边距
+GAP_CARD = 16            # 卡片间距（8pt 网格）
+RADIUS = 16              # Canvas 视觉元素圆角
+RADIUS_CARD = 20         # 大卡片圆角（Bento 模块卡）
+NAV_WIDTH = 160          # 侧边栏宽
+NAV_ITEM_H = 38          # 导航项高
+STAT_H = 108             # 统计卡高
+
+# 动效 token：hover/交互平滑过渡
+MOTION_MS = 180          # 过渡时长
+MOTION_STEPS = 8         # 颜色渐变插值步数
+
+APP_NAME = "回顾 Agent"
+APP_VERSION = "v1.1.0-orbis"
+
+
+def apply_window_material(win, *, acrylic: bool = True) -> None:
+    """给顶层窗口应用深空 Acrylic 磨砂材质 + 标题栏跟随暗色。
+
+    pywinstyles 缺失或调用失败时静默降级为纯色主题，绝不抛异常。
+    """
+    try:
+        import pywinstyles
+    except Exception:  # noqa: BLE001
+        return
+    try:
+        if acrylic:
+            pywinstyles.apply_style(win, "acrylic")
+        pywinstyles.change_title_color(win, "#EFF4FF")
+        pywinstyles.change_border_color(win, _SPACE["BORDER"])
+    except Exception:  # noqa: BLE001
+        pass
+
+
+# 默认激活 space 主题（main.py 启动后调用 ensure_fonts 刷新字体）
+set_theme("space")

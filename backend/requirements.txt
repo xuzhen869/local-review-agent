@@ -1,0 +1,19 @@
+# 个人工作/学习回顾 Agent —— 依赖清单
+# 后端 + 桌面宠物共用同一虚拟环境
+fastapi>=0.115
+uvicorn[standard]>=0.30
+aiosqlite>=0.20
+sqlcipher3>=0.6.0
+pydantic>=2.7
+pyyaml>=6.0
+watchdog>=4.0
+cryptography>=42.0
+httpx>=0.27
+python-multipart>=0.0.9
+
+# 桌面宠物（Qt6 界面 + 截图）
+pillow>=10.0
+PySide6>=6.7
+
+# 截图 OCR（可选，懒加载：引擎未装时截图仅保存不识别）
+rapidocr_onnxruntime>=0.1

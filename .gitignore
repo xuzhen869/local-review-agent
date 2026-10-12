@@ -1,0 +1,56 @@
+# ─── 密钥与环境 ───
+.env
+*.env
+*.env.local
+secrets/
+_cfg.json
+_proxies.json
+
+# ─── 数据库（SQLCipher 加密库，本地数据不入库）───
+*.db
+*.db.bak
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ─── 构建产物 ───
+build/
+build_diag/
+build_diag2/
+build_diag3/
+dist/
+dist_diag/
+dist_diag2/
+dist_diag3/
+*.exe
+
+# ─── 日志 ───
+logs/
+*.log
+
+# ─── 运行时产物 ───
+_frames/
+export/
+
+# ─── 大文件 — 模型权重与视频素材（体积过大，见 README 获取方式）───
+backend/app/agent/bge/model.onnx
+assets/videos/
+video_frame_*.png
+
+# ─── IDE & OS ───
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
