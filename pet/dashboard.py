@@ -174,7 +174,7 @@ class Dashboard(tk.Toplevel):
         self.minsize(980, 640)
         self.configure(bg=T.BG)
         self._nav_buttons: dict[str, ui.NavItem] = {}
-        # 问答会话状态：QaPage 跨切页保留对话历史与 session_id（Claude 式多轮）
+        # 问答会话状态：QaPage 跨切页保留对话历史与 session_id（多轮对话）
         self.qa_state: dict = {"session_id": None, "turns": []}
         self._build()
         self.protocol("WM_DELETE_WINDOW", self.close)
@@ -636,7 +636,7 @@ class ReportPage(tk.Frame):
 # 问答：自然语言提问 → LLM 基于本地事件回答（带溯源）
 # ---------------------------------------------------------------------------
 class QaPage(tk.Frame):
-    """历史问答：Claude 式对话流——上方滚动对话区 + 底部固定输入栏。
+    """历史问答：对话流式界面——上方滚动对话区 + 底部固定输入栏。
 
     多轮连续：复用后端返回的 session_id；对话记录存于 Dashboard.qa_state，
     切换页面再回来时自动恢复历史。视觉全部复用 theme/ui 的 Orbis 太空风。
